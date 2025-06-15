@@ -9,4 +9,6 @@ services:
     autoDeploy: true
     envVars:
       - key: REACT_APP_API_URL
-        value: https://fastapi-backend.onrender.com
+        value: https://chat-app-backend-pg6c.onrender.com
+      - key: REACT_APP_WS_API_URL
+        value: wss://chat-app-backend-pg6c.onrender.com/ws
