@@ -1,0 +1,33 @@
+name: Deploy to Render via Docker
+
+on:
+  push:
+    branches:
+      - main  # or your deployment branch
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Optional: run frontend build/test
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install frontend dependencies
+        run: |
+          npm ci
+          npm run build
+
+      - name: Trigger Render backend deploy
+        run: |
+          curl -X POST ${{ secrets.RENDER_DEPLOY_BACKEND_HOOK }}
+
+      - name: Trigger Render frontend deploy
+        run: |
+          curl -X POST ${{ secrets.RENDER_DEPLOY_FRONTEND_HOOK }}
