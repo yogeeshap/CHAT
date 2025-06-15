@@ -5,6 +5,7 @@ function App() {
   const socketRef = useRef(null);
   const [input, setInput] = useState("");
   const WS_BASE_URL = process.env.REACT_APP_WS_API_URL;
+  console.log(WS_BASE_URL,'WS_BASE_URL')
 
   useEffect(() => {
     socketRef.current = new WebSocket(WS_BASE_URL);
