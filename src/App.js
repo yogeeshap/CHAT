@@ -28,7 +28,7 @@ function App() {
 
   return (
     <div>
-      <h1>WebSocket Chat</h1>
+      <h1>Let's Chat</h1>
       <div>
         {messages.map((msg, i) => (
           <div key={i}>{msg}</div>
