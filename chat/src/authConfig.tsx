@@ -13,8 +13,8 @@ const isFirefox = firefox > 0 // Only needed if you need to support the redirect
 // Config object to be passed to Msal on creation
 const authConfig = {
   auth: {
-    apiUrl: 'http://127.0.0.1:8000',
-    wsUrl:'ws://127.0.0.1:8000/ws',
+    apiUrl: import.meta.env.VITE_API_URL,
+    wsUrl:import.meta.env.VITE_WS_URL,
     redirectUri: '/',
     postLogoutRedirectUri: '/',
   },

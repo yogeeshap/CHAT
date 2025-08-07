@@ -30,6 +30,7 @@ import AddMainModal from "./AddRoomModal";
 import EditRoomModal from "./EditRoomModel";
 import GroupAddRoundedIcon from "@mui/icons-material/GroupAddRounded";
 import ParticipantsModal from "./ParticipantsModel";
+import authConfig from '../../authConfig'
 
 interface ChatProps {
   roomId: string;
@@ -194,7 +195,7 @@ const Chat: React.FC<ChatProps> = ({ roomId, userId }) => {
 
         // WebSocket connection
         const ws = new WebSocket(
-          `wss://localhost:8000/ws/chat/${roomId}/${userId}`
+          `${authConfig.auth.wsUrl}/chat/${roomId}/${userId}`
         );
         wsRef.current = ws;
 

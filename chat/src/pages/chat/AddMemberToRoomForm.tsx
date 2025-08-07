@@ -21,6 +21,7 @@ import chatService from "../../services/chat.service";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { debounce } from "lodash";
 import { setRoomAllUser } from "../../store/slice/chatSlice";
+import authConfig from "../../authConfig";
 // import { setRoomUser } from '../../store/slice/chatSlice'
 
 const schema = yup.object().shape({
@@ -85,7 +86,7 @@ const AddMemberToRoomForm: React.FC<Room> = ({
 
   useEffect(() => {
     const ws = new WebSocket(
-      `wss://localhost:8000/ws/chat/${roomId}/${userId}`
+      `${authConfig.auth.wsUrl}/chat/${roomId}/${userId}`
     );
     wsRef.current = ws;
 

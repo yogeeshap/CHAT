@@ -6,19 +6,15 @@ import MicRoundedIcon from '@mui/icons-material/MicRounded';
 import MicOffRoundedIcon from '@mui/icons-material/MicOffRounded';
 import VideocamOffRoundedIcon from '@mui/icons-material/VideocamOffRounded';
 import VideocamRoundedIcon from '@mui/icons-material/VideocamRounded';
+import authConfig from '../../authConfig';
 
 interface MediaProps {
   roomId: string;
   userId: string;
-  // hostId:string
 }
 
 const MediaController: React.FC<MediaProps> = ({ roomId, userId}) => {
   const wsRef = useRef<WebSocket | null>(null);
-//   const [input, setInput] = useState("");
-//   const [file, setFile] = useState<any | null>(null);
-//   const [preview, setPreview] = useState<string | null>(null);
-  // const [callStarted, setCallStarted] = useState(false);
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const peers = useRef<Record<string, RTCPeerConnection>>({});
   const localStreamRef = useRef<MediaStream | null>(null);
@@ -26,19 +22,11 @@ const MediaController: React.FC<MediaProps> = ({ roomId, userId}) => {
   const remoteVideoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
   const [audioEnabled, setAudioEnabled] = useState(true);
   const [videoEnabled, setVideoEnabled] = useState(true);
-  // const [isHost, setIsHost] = useState(false);
   const [hasJoined, setHasJoined] = useState(false);
-  // const [mediaReady, setMediaReady] = useState(false);
   const [userCount, setUserCount] = useState(0);
-  // const [participants, setParticipants] = useState<string[]>([]);
-  // const [hostId, setHostId] = useState<string | null>(null);
-  // const [userList, setUserList] = useState<string[]>([]);
   const [leftUser, setLeftUser] = useState<string | null>(null);
 
-  const WS_BASE_URL = 'ws://127.0.0.1:8000/ws';
-  
   const navigate = useNavigate();
-  // const isHost = userId === hostId;
 
   useEffect(() => {
   if (leftUser  && leftUser === userId) {
@@ -54,8 +42,6 @@ const MediaController: React.FC<MediaProps> = ({ roomId, userId}) => {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
     localStreamRef.current = stream;
-    // setMediaReady(true);
-
     if (localVideoRef.current) {
       localVideoRef.current.srcObject = stream;
     }
@@ -144,50 +130,6 @@ useEffect(() => {
 },[remoteStreams]);
 
 
-
-//   const endCall = useCallback(() => {
-//     if (!userId) return
-//   // Stop all tracks of local stream
-//   
-//   if (localStreamRef.current) {
-//     // 
-//     localStreamRef.current.getTracks().forEach((track) => track.stop());
-//     localStreamRef.current = null; // <-- Important!
-//     // 
-//   }
-
-//   // Close all peer connections
-//   Object.values(peers.current).forEach((pc) => {
-//     pc.close();
-//   });
-
-//   // Clear peer connections and remote streams
-//   peers.current = {};
-//   setRemoteStreams({});
-//   remoteVideoRefs.current = {};
-
-//   // Clear local video
-//   if (localVideoRef.current) {
-//     localVideoRef.current.srcObject = null;
-//   }
-
-  
-//   // Optionally notify others
-//   if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-//     wsRef.current.send(
-//       JSON.stringify({
-//         type: "end_call",
-//         sender: userId,
-//       })
-//     );
-//   }
-
-//   setCallStarted(false); // hide video
-//   setHasJoined(false);
-
-//   
-// },[callStarted,remoteStreams,hasJoined]);
-
 const endCall = useCallback(() => {
   if (!userId) return;
 
@@ -262,7 +204,7 @@ const joinCall = useCallback(async () => {
       }
 
       // WebSocket connection
-      const ws = new WebSocket(`wss://localhost:8000/ws/chat/${roomId}/${userId}`);
+      const ws = new WebSocket(`${authConfig.auth.wsUrl}/chat/${roomId}/${userId}`);
       wsRef.current = ws;
 
       ws.onopen = () => {

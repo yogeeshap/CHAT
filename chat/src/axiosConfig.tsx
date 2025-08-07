@@ -9,9 +9,12 @@ import type {
   AxiosResponse
 } from 'axios';
 
+
 import { useNavigate } from 'react-router-dom'
 
-const apiUrl = 'https://localhost:8000/'
+import authConfig from './authConfig'
+
+const apiUrl = authConfig.auth.apiUrl
 
 const options: CreateAxiosDefaults = {
   baseURL: apiUrl,
