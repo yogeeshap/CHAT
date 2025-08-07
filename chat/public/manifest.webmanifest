@@ -1,0 +1,28 @@
+{
+  "name": "WeHarate Chat App",
+  "short_name": "WeHarate",
+  "description": "A real-time chat application",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "icons": [
+    {
+      "src": "assets/pwa-android-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "assets/pwa-android-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+    ,
+    {
+      "src": "assets/pwa-android-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
