@@ -9,9 +9,3 @@ html, body, #root {
   padding: 0;
   overflow: hidden; /* prevent scrollbars */
 }
-/* 
-.MuiFab-root {
-  width: 30px !important;
-  height: 30px !important;
-  min-height: unset !important;
-} */
