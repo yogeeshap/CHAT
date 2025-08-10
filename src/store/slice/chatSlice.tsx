@@ -9,7 +9,8 @@ type InitialState = {
   name:string
   },
   roomUser:[],
-  roomAllUser:[]
+  roomAllUser:[],
+  activeRoomUser:{roomId:string,userId:string}
 }
 
 const initialState: InitialState = {
@@ -20,7 +21,8 @@ const initialState: InitialState = {
     name:''
   },
   roomUser:[],
-  roomAllUser:[]
+  roomAllUser:[],
+  activeRoomUser:{roomId:'',userId:''}
 }
 
 export const chatSlice = createSlice({
@@ -50,6 +52,10 @@ export const chatSlice = createSlice({
     findUser: (state, action) => {
       const { users } = action.payload
       state.users = users
+    },
+    setActiveRoomUser: (state, action) => {
+      const { activeRoomUser } = action.payload
+      state.activeRoomUser = activeRoomUser
     }
   },
    extraReducers: (builder) => {
@@ -69,6 +75,6 @@ export const { getChatHistory,
                 setRoom,
                 findUser,
                 setRoomUser,
-                setRoomAllUser} = chatSlice.actions
+                setRoomAllUser,setActiveRoomUser} = chatSlice.actions
 
 export default chatSlice.reducer

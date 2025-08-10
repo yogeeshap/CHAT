@@ -24,6 +24,7 @@ import {
   useAppSelector,
 } from "../../services/hooks/store-hooks";
 import { fetchRoom, fetchRoomUsers } from "../../store/slice/thunk";
+import {setActiveRoomUser} from '../../store/slice/chatSlice'
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import AddMainModal from "./AddRoomModal";
@@ -31,6 +32,7 @@ import EditRoomModal from "./EditRoomModel";
 import GroupAddRoundedIcon from "@mui/icons-material/GroupAddRounded";
 import ParticipantsModal from "./ParticipantsModel";
 import authConfig from '../../authConfig'
+import { useNavigate } from "react-router-dom";
 
 interface ChatProps {
   roomId: string;
@@ -91,12 +93,19 @@ const Chat: React.FC<ChatProps> = ({ roomId, userId }) => {
    const [participantsCount, setParticipantsCount] = useState<number | null>(0);
   const maxWidth = 350;
   const maxHeight = 250;
-
+  const navigate = useNavigate();
   const dispatch = useAppDispatch();
 
   const allRoomUsers = useAppSelector<UserDetail[]>(
     (state) => state.chat.roomAllUser || []
   );
+
+  const activeRoomUser = useAppSelector<ChatProps>(
+    (state) => state.chat.activeRoomUser || {}
+  );
+
+
+
 
   const room = useAppSelector<Room>((state) => state.chat.room);
 
@@ -126,24 +135,28 @@ const Chat: React.FC<ChatProps> = ({ roomId, userId }) => {
   }, [sourceElementSize]);
 
   useEffect(() => {
-    (async () => {
-      
+  if (roomId && userId) {
+    if (
+      activeRoomUser.roomId !== roomId ||
+      activeRoomUser.userId !== userId
+    ){
+    setInput("");
+    setFile(null);
+    setPreview(null);
 
-      if (roomId && userId) {
-        setInput("");
-        setFile(null);
-        setPreview(null);
-        const fetchData = async () => {
-          await Promise.all([
-            dispatch(fetchRoomUsers(roomId)),
-            dispatch(fetchRoom(roomId)),
-          ]);
-        };
+    const fetchData = async () => {
+      await Promise.all([
+        dispatch(fetchRoomUsers(roomId)),
+        dispatch(fetchRoom(roomId)),
+      ]);
+    };
 
-        fetchData();
-      }
-    })();
-  }, [dispatch, roomId, userId]);
+    fetchData();
+      dispatch(setActiveRoomUser({ activeRoomUser: { roomId, userId } }));
+    }
+  }
+}, [dispatch, roomId, userId]);
+
 
   useEffect(() => {
     if (!topRef.current || !hasMore || loading) return;
@@ -468,11 +481,13 @@ const Chat: React.FC<ChatProps> = ({ roomId, userId }) => {
   );
 
   const handleMedia = useCallback(() => {
-    window.open(
-      `/meet-me/${roomId}/${userId}`,
-      "_blank",
-      "noopener,noreferrer"
-    );
+    // window.open(
+    //   `/meet-me/${roomId}/${userId}`,
+    //   "_blank",
+    //   "noopener,noreferrer"
+    // );
+    navigate(`/meet-me/${roomId}/${userId}`)
+    
   }, [roomId, userId]);
 
   const removeFile = useCallback(() => {

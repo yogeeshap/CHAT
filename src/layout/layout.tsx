@@ -12,8 +12,8 @@ import { Loading } from '../components/Loading'
 function Layout() {
   const [isAuthorised, setAuthorised] = useState<boolean>(true)
   const [loading, setLoading] = useState<boolean>(true)
-  // const { errorNotification } = useNotification()
   const dispatch = useAppDispatch()
+
   useEffect(() => {
     ; (async () => {
       try {
@@ -23,10 +23,7 @@ function Layout() {
       } catch (err: any) {
         if (err.response.status === 401) {
           setAuthorised(false)
-          // window.alert("error occuered")
-          // errorNotification('Un-Authorized')
         } else {
-          // errorNotification()
           window.alert("error occuered")
         }
         console.error(err)

@@ -6,7 +6,7 @@ import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import { createTheme } from "@mui/material/styles";
 import SearchIcon from "@mui/icons-material/Search";
-import { useTheme ,ThemeProvider} from '@mui/material';
+import { ThemeProvider} from '@mui/material';
 import {
   AppProvider,
   type Navigation,
@@ -30,6 +30,12 @@ import authService from "../../services/auth.service";
 import CreateRoomModal from "./CreateRoomModel";
 import { theme } from "../../theme/theme";
 
+
+interface RoomProps {
+  roomId: string;
+  userId: string;
+}
+
 const chatBoxTheme = createTheme({
   cssVariables: {
     colorSchemeSelector: "data-toolpad-color-scheme",
@@ -44,45 +50,54 @@ const chatBoxTheme = createTheme({
       xl: 1536,
     },
   },
-  
   components: {
     MuiButton: {
       styleOverrides: {
         root: {
           fontWeight: 'bold',
           textTransform: 'none',
-          color: 'white',
-          '&:active': {
-          backgroundColor: 'red', // change to your active color
-          color: '#fff',              // optional: change text color on press
-        },
+          color: '#11c111 !important',
+          backgroundColor: '#eded567d !important',
         },
         text: {
           fontWeight: 'bold',
           textTransform: 'none',
-          color: '#0000A0',
-          '&:active': {
-          backgroundColor: 'red', // change to your active color
-          color: '#fff',              // optional: change text color on press
-        },
         },
         contained: {
           fontWeight: 'bold',
           textTransform: 'none',
-          color: 'white',
-          backgroundColor: '#0000A0',
-          '&:active': {
-          backgroundColor: 'red', // change to your active color
-          color: '#fff',              // optional: change text color on press
         },
+      },
+    },
+
+    // 🔧 ADD THIS
+    MuiListItemButton: {
+      styleOverrides: {
+        root: {
+          '&.Mui-selected': {
+            color: '#11c111 !important',
+            backgroundColor: '#eded567d !important',
+          },
+          '&.Mui-selected:hover': {
+            backgroundColor: '#eded567d !important',
+          },
         },
       },
     },
   },
 });
 
+
 function ChatBoxPage({ pathname }: { pathname: string }) {
   const [, roomId, userId] = pathname.match(/[^\/]+/g) || [];
+
+  const activeRoomUser = useAppSelector<RoomProps>(
+    (state) => state.chat.activeRoomUser || {}
+  );
+
+  const activeRoomId = roomId || activeRoomUser.roomId
+  const activeUserId = userId || activeRoomUser.userId
+
   return (
     <Box
       sx={{
@@ -91,7 +106,7 @@ function ChatBoxPage({ pathname }: { pathname: string }) {
         height: "-webkit-fill-available",
       }}
     >
-      <Chat roomId={roomId} userId={userId} />
+      <Chat roomId={activeRoomId} userId={activeUserId} />
     </Box>
   );
 }
@@ -240,13 +255,6 @@ export default function ChatBoxLayout(props: DemoProps) {
     }
   }, [roomUserDetails, logedInUser]);
 
-  
-
-  const theme1 = useTheme();
-    
-    
-    
-    
   return (
     // Remove this provider when copying and pasting into your project.
     <Box sx={{position:"relative",width:'100%',height:'100%'}}>
