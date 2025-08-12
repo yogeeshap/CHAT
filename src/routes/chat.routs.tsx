@@ -4,7 +4,6 @@ import { Navigate, type RouteObject } from 'react-router-dom'
 
 const Chat = Loadable(lazy(() => import('../pages/chat/index')))
 const MediaControllerWrapper = Loadable(lazy(() => import('../pages/chat/mediaControllerWrapper')))
-// const Room = Loadable(lazy(() => import('../pages/chat/RoomCreator')))
 
 const chatRoutes: RouteObject[] = [
     {

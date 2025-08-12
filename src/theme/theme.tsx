@@ -69,30 +69,18 @@ export const theme = createTheme({
         root: {
           fontWeight: 'bold',
           textTransform: 'none',
-          color: 'white',
-        //   '&:active': {
-        //   backgroundColor: 'red', // change to your active color
-        //   color: '#fff',              // optional: change text color on press
-        // },
+          color:'#11c111 !important',
+          backgroundColor:'#eded567d !important'
         },
         text: {
           fontWeight: 'bold',
           textTransform: 'none',
-          color: '#0000A0',
-        //   '&:active': {
-        //   backgroundColor: 'red', // change to your active color
-        //   color: '#fff',              // optional: change text color on press
-        // },
+
         },
         contained: {
           fontWeight: 'bold',
           textTransform: 'none',
-          color: 'white',
           backgroundColor: '#0000A0',
-        //   '&:active': {
-        //   backgroundColor: 'red', // change to your active color
-        //   color: '#fff',              // optional: change text color on press
-        // },
         },
       },
     },
@@ -248,8 +236,10 @@ export const theme = createTheme({
         root: {
           minWidth: 30,         // set your global width here
           minHeight: 30,
-          maxWidth: 30,         // set your global width here
-          maxHeight: 30,
+          width: 30,         // set your global width here
+          height: 30,
+          color:'#11c111 !important',
+          backgroundColor:'#eded567d !important'
         },
       },
     },
@@ -268,8 +258,10 @@ export const theme = createTheme({
     MuiAvatar: {
       styleOverrides: {
         root: {
-          maxWidth: 30,
-          maxHeight: 30,
+          width: 30,
+          height: 30,
+          color:'#11c111 !important',
+          backgroundColor:'#eded567d !important'
         },
       },
     },

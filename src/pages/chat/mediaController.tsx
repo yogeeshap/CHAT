@@ -1,10 +1,12 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Button, Fab, IconButton, Typography } from '@mui/material';
+import { Avatar, Box, Button, Fab, IconButton, Typography } from '@mui/material';
 import PhoneDisabledRoundedIcon from '@mui/icons-material/PhoneDisabledRounded';
 import MicRoundedIcon from '@mui/icons-material/MicRounded';
 import MicOffRoundedIcon from '@mui/icons-material/MicOffRounded';
+import PersonIcon from "@mui/icons-material/Person";
 import VideocamOffRoundedIcon from '@mui/icons-material/VideocamOffRounded';
+import { blue } from "@mui/material/colors";
 import VideocamRoundedIcon from '@mui/icons-material/VideocamRounded';
 import authConfig from '../../authConfig';
 
@@ -25,7 +27,7 @@ const MediaController: React.FC<MediaProps> = ({ roomId, userId}) => {
   const [hasJoined, setHasJoined] = useState(false);
   const [userCount, setUserCount] = useState(0);
   const [leftUser, setLeftUser] = useState<string | null>(null);
-
+  const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -38,21 +40,46 @@ const MediaController: React.FC<MediaProps> = ({ roomId, userId}) => {
   }
 }, [leftUser]);
 
-  const prepareMedia = async () => {
+//   const prepareMedia = async () => {
+//   try {
+//     const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+//     localStreamRef.current = stream;
+//     // if (localVideoRef.current) {
+//     //   localVideoRef.current.srcObject = stream;
+//     // }
+//   } catch (error) {
+//     console.error("Error accessing media devices:", error);
+//   }
+// };
+
+const prepareMedia = async () => {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
     localStreamRef.current = stream;
-    if (localVideoRef.current) {
-      localVideoRef.current.srcObject = stream;
-    }
+    setLocalStream(stream); // ✅ store it in state
   } catch (error) {
     console.error("Error accessing media devices:", error);
   }
 };
 
+
 useEffect(() => {
   prepareMedia();
 }, []);
+
+
+// useEffect(() => {
+//   if (localVideoRef.current && localStreamRef.current) {
+//     localVideoRef.current.srcObject = localStreamRef.current;
+//   }
+// }, [localStreamRef.current]);
+
+useEffect(() => {
+  if (localVideoRef.current && localStream) {
+    localVideoRef.current.srcObject = localStream;
+  }
+}, [localStream]);
+
 
 
   const createPeer = useCallback((peerId: string) => {
@@ -130,44 +157,117 @@ useEffect(() => {
 },[remoteStreams]);
 
 
+// const endCall = useCallback(() => {
+//   if (!userId) return;
+
+//   // Stop local media tracks
+//   if (localStreamRef.current) {
+//     localStreamRef.current.getTracks().forEach(track => track.stop());
+//     localStreamRef.current = null;
+//   }
+
+//   // Close all peer connections
+//   Object.values(peers.current).forEach(pc => pc.close());
+
+//   // Clear peer refs and streams
+//   peers.current = {};
+//   setRemoteStreams({});
+//   remoteVideoRefs.current = {};
+
+//   // Clear local video element
+//   if (localVideoRef.current) {
+//     localVideoRef.current.srcObject = null;
+//   }
+
+//   // Notify backend and peers
+//   if (wsRef.current?.readyState === WebSocket.OPEN) {
+//     wsRef.current.send(JSON.stringify({
+//       type: "left_call",
+//       sender: userId,  // ensure consistency
+//     }));
+//     wsRef.current.close();
+//   }
+
+//   // setCallStarted(false);
+//   setHasJoined(false);
+
+  
+
+  
+// }, [userId]);
+
+
+
 const endCall = useCallback(() => {
   if (!userId) return;
 
-  // Stop local media tracks
+  // ✅ 1. Stop and release all tracks from local stream
   if (localStreamRef.current) {
-    localStreamRef.current.getTracks().forEach(track => track.stop());
-    localStreamRef.current = null;
+    localStreamRef.current.getTracks().forEach(track => {
+      try {
+        track.stop();
+      } catch (err) {
+        console.warn("Error stopping track:", err);
+      }
+    });
   }
 
-  // Close all peer connections
-  Object.values(peers.current).forEach(pc => pc.close());
-
-  // Clear peer refs and streams
-  peers.current = {};
-  setRemoteStreams({});
-  remoteVideoRefs.current = {};
-
-  // Clear local video element
+  // ✅ 2. Remove video source and clean up local <video> element
   if (localVideoRef.current) {
-    localVideoRef.current.srcObject = null;
+    try {
+      localVideoRef.current.pause();
+      localVideoRef.current.srcObject = null;
+      localVideoRef.current.removeAttribute("srcObject");
+    } catch (e) {
+      console.warn("Error clearing video element:", e);
+    }
   }
 
-  // Notify backend and peers
+  // ✅ 3. Clear local stream references
+  setLocalStream(null);
+  localStreamRef.current = null;
+
+  // ✅ 4. Close all peer connections
+  Object.values(peers.current).forEach(pc => {
+    try {
+      pc.close();
+    } catch (err) {
+      console.warn("Error closing peer:", err);
+    }
+  });
+  peers.current = {};
+  remoteVideoRefs.current = {};
+  setRemoteStreams({});
+
+  // ✅ 5. Notify backend + close WebSocket
   if (wsRef.current?.readyState === WebSocket.OPEN) {
     wsRef.current.send(JSON.stringify({
       type: "left_call",
-      sender: userId,  // ensure consistency
+      sender: userId,
     }));
     wsRef.current.close();
   }
 
-  // setCallStarted(false);
+  // ✅ 6. Mark call as left
   setHasJoined(false);
 
-  
+  // ✅ 7. Forcefully stop any remaining hardware access (if leaked)
+  navigator.mediaDevices.enumerateDevices().then(devices => {
+    devices.forEach(device => {
+      if (device.kind === 'videoinput') {
+        navigator.mediaDevices.getUserMedia({ video: { deviceId: device.deviceId } })
+          .then(stream => {
+            stream.getTracks().forEach(track => track.stop());
+          })
+          .catch(() => {
+            // Ignore errors: stream already stopped or permission denied
+          });
+      }
+    });
+  });
 
-  
 }, [userId]);
+
 
 const joinCall = useCallback(async () => {
   try {
@@ -437,7 +537,7 @@ const toggleVideo = useCallback(async () => {
 }, [videoEnabled]);
 
 
-
+console.log(videoEnabled,'videoEnabled',leftUser)
   return (
 
   <Box component="main" sx={{
@@ -452,22 +552,29 @@ const toggleVideo = useCallback(async () => {
   <Box
     sx={{
       height: '100vh',
-      display: 'grid',
+      width:'100%',
+      display: 'flex',
       placeItems: 'center',
       backgroundColor: '#f8f8f8',
       textAlign: 'center',
+      justifyContent:'center',
+      flexDirection:'column',
+      gap:2,
       p: 4,
     }}
   >
     <Typography variant="h4" gutterBottom>Call Ended</Typography>
-    <Button variant="contained" onClick={() => navigate('/')}>Chat Box</Button>
+    <Button variant="contained" onClick={() => navigate('/')}>Back To Chat Box</Button>
   </Box>
 ):
     <Box sx={{ display: 'flex',
      flexDirection: 'column', 
      alignItems: 'center', 
+     position:!hasJoined?'relative':undefined,
+     width:'100%',
+     height:'100%',
      gap: 2 }}>
-  <video
+  {/* <video
     ref={(ref) => {
       if (ref instanceof HTMLVideoElement && localStreamRef.current) {
         ref.srcObject = localStreamRef.current;
@@ -489,8 +596,38 @@ const toggleVideo = useCallback(async () => {
       objectFit: "cover",
       opacity: 1 // Just hide it if not joined
     }:undefined}
-  />
-   {!videoEnabled && (
+  /> */}
+  <video
+  ref={localVideoRef}
+  autoPlay
+  muted
+  playsInline
+  style={hasJoined?{
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "black",  // fallback background
+    width: "100%",
+    height: "100%",
+    objectFit: "cover",
+    opacity: 1,
+    // zIndex: 1
+  }:{position: "absolute",
+    top: '20%',
+    left: '25%',
+    right: 0,
+    bottom: 0,
+    backgroundColor: "black",  // fallback background
+    width: "50%",
+    height: "50%",
+    objectFit: "cover",
+    opacity: 1}}
+/>
+
+
+   {/* {!videoEnabled && (
     <Box
       sx={{
         // position: "absolute",
@@ -506,7 +643,7 @@ const toggleVideo = useCallback(async () => {
         // borderRadius: "12px",
       }}
     />
-  )}
+  )} */}
   <Box sx={hasJoined?{
         display: 'flex',
         gap: 1, 
@@ -518,15 +655,34 @@ const toggleVideo = useCallback(async () => {
         }:{ display: 'flex',
         gap: 1, 
         flexWrap: 'wrap', 
-        justifyContent: 'center' }}>
+        justifyContent: 'center',
+        position:"absolute",
+        flexDirection:'row',
+        bottom:80,
+        alignItems:'center'
+         }}>
 
 
-  {!hasJoined && <Fab 
+  {!hasJoined && (<><Fab 
       variant="extended"
       color="primary"
-      onClick={joinCall}>
+      onClick={joinCall}
+      sx={{
+        width:100,
+        height:50,
+      }}
+      
+      >
     join call
     </Fab>
+      <Avatar sx={{ width:50,height:50}}>
+                          <PersonIcon />
+                        </Avatar>
+    <Typography variant="subtitle1" align="center">
+  + {userCount}
+</Typography>
+</>
+)
     }
 
   {hasJoined && (<><IconButton
@@ -583,9 +739,7 @@ disableRipple
   </div>
 ))}
 
-<Typography variant="subtitle1" align="center">
-  {userCount} user{userCount === 1 ? '' : 's'} in call
-</Typography>
+
 </Box>}
 
 {/* <Stack direction="row" spacing={1}>
