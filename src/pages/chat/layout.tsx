@@ -242,7 +242,7 @@ export default function ChatBoxLayout(props: DemoProps) {
     
       const roomUserDetailsData = roomUserDetails?.map((user: any) => {
         return {
-          segment: `chat/${user["room_id"]}/${user["user_id"]}}`,
+          segment: `chat/${user["room_id"]}/${user["user_id"]}`,
           title: user["room_name"],
           icon: <AccountCircleIcon />,
         };

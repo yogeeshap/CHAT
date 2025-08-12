@@ -24,14 +24,14 @@ import {
   useAppSelector,
 } from "../../services/hooks/store-hooks";
 import { fetchRoom, fetchRoomUsers } from "../../store/slice/thunk";
-import {setActiveRoomUser} from '../../store/slice/chatSlice'
+import { setActiveRoomUser } from "../../store/slice/chatSlice";
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import AddMainModal from "./AddRoomModal";
 import EditRoomModal from "./EditRoomModel";
 import GroupAddRoundedIcon from "@mui/icons-material/GroupAddRounded";
 import ParticipantsModal from "./ParticipantsModel";
-import authConfig from '../../authConfig'
+import authConfig from "../../authConfig";
 import { useNavigate } from "react-router-dom";
 
 interface ChatProps {
@@ -65,7 +65,7 @@ type Room = {
 
 const Chat: React.FC<ChatProps> = ({ roomId, userId }) => {
   const [messages, setMessages] = useState<Message[]>([]);
-  const [typingUsers, setTypingUsers] = useState(new Set());
+  const [typingUsers, setTypingUsers] = useState(new Map());
   const wsRef = useRef<WebSocket | null>(null);
   const typingTimeoutRef = useRef<number | null>(null);
   const [input, setInput] = useState("");
@@ -90,7 +90,10 @@ const Chat: React.FC<ChatProps> = ({ roomId, userId }) => {
   const [openParticipants, setOpenParticipants] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [participants, setParticipants] = useState<UserDetail[]>([]);
-   const [participantsCount, setParticipantsCount] = useState<number | null>(0);
+  const [participantsCount, setParticipantsCount] = useState<number | null>(0);
+  const isInitialLoadRef = useRef(true);
+  const scrollOffsetRef = useRef<number | null>(null);
+  const prevMessageCountRef = useRef(0);
   const maxWidth = 350;
   const maxHeight = 250;
   const navigate = useNavigate();
@@ -104,8 +107,15 @@ const Chat: React.FC<ChatProps> = ({ roomId, userId }) => {
     (state) => state.chat.activeRoomUser || {}
   );
 
+  // useEffect(() => {
+  //   const pingInterval = setInterval(() => {
+  //     if (wsRef.current?.readyState === WebSocket.OPEN) {
+  //       wsRef.current.send(JSON.stringify({ type: 'ping' }));
+  //     }
+  //   }, 30000);
 
-
+  //   return () => clearInterval(pingInterval);
+  // }, []);
 
   const room = useAppSelector<Room>((state) => state.chat.room);
 
@@ -134,44 +144,61 @@ const Chat: React.FC<ChatProps> = ({ roomId, userId }) => {
     }
   }, [sourceElementSize]);
 
+
   useEffect(() => {
-  if (roomId && userId) {
-    if (
-      activeRoomUser.roomId !== roomId ||
-      activeRoomUser.userId !== userId
-    ){
-    setInput("");
-    setFile(null);
-    setPreview(null);
+    if (roomId && userId) {
+      if (
+        activeRoomUser.roomId !== roomId ||
+        activeRoomUser.userId !== userId
+      ) {
+        setInput("");
+        setFile(null);
+        setPreview(null);
+        setMessages([]);
+        setLoading(false); // reset loading state on room switch
+        setHasMore(true); // reset hasMore on room switch
+        isInitialLoadRef.current = true;
+        prevMessageCountRef.current = 0;
+        scrollOffsetRef.current = null; // reset scroll offset
 
-    const fetchData = async () => {
-      await Promise.all([
-        dispatch(fetchRoomUsers(roomId)),
-        dispatch(fetchRoom(roomId)),
-      ]);
-    };
+        const fetchData = async () => {
+          await Promise.all([
+            dispatch(fetchRoomUsers(roomId)),
+            dispatch(fetchRoom(roomId)),
+          ]);
+        };
 
-    fetchData();
-      dispatch(setActiveRoomUser({ activeRoomUser: { roomId, userId } }));
+        fetchData();
+        dispatch(setActiveRoomUser({ activeRoomUser: { roomId, userId } }));
+      }
     }
-  }
-}, [dispatch, roomId, userId]);
-
+  }, [dispatch, roomId, userId]);
 
   useEffect(() => {
-    if (!topRef.current || !hasMore || loading) return;
+    if (!topRef.current || !containerRef.current || loading || !hasMore) return;
+
+    let cancelled = false;
 
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (
+          !cancelled &&
           entry.isIntersecting &&
           wsRef.current?.readyState === WebSocket.OPEN
         ) {
+          const scrollContainer = containerRef.current;
+
+          if (!scrollContainer) return;
+
+          scrollOffsetRef.current =
+            scrollContainer.scrollHeight - scrollContainer.scrollTop;
           setLoading(true);
+
           wsRef.current.send(
             JSON.stringify({
               type: "load_older",
-              start_cursor: messages[0]?.timestamp,
+              start_timestamp:
+                messages.length > 0 ? messages[0].timestamp : null,
             })
           );
         }
@@ -179,12 +206,17 @@ const Chat: React.FC<ChatProps> = ({ roomId, userId }) => {
       {
         root: containerRef.current,
         threshold: 0.1,
+        rootMargin: "10px",
       }
     );
 
     observer.observe(topRef.current);
-    return () => observer.disconnect();
-  }, [messages, hasMore, loading]);
+
+    return () => {
+      cancelled = true;
+      observer.disconnect();
+    };
+  }, [messages, hasMore, loading, roomId]);
 
   const simulateReceiveImage = (byteArray: Uint8Array) => {
     const url = `data:image/png;base64,${byteArray}`;
@@ -194,8 +226,20 @@ const Chat: React.FC<ChatProps> = ({ roomId, userId }) => {
   useEffect(() => {
     if (initialLoaded) {
       bottomRef.current?.scrollIntoView({ behavior: "auto" });
+      isInitialLoadRef.current = false; // mark initial load done
     }
   }, [initialLoaded]);
+
+  // Scroll smoothly on new incoming messages (but not when loading older)
+  useEffect(() => {
+    const newMessageAdded = messages.length > prevMessageCountRef.current;
+
+    if (!isInitialLoadRef.current && newMessageAdded) {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+
+    prevMessageCountRef.current = messages.length;
+  }, [messages]);
 
   useEffect(() => {
     const setup = async () => {
@@ -212,50 +256,69 @@ const Chat: React.FC<ChatProps> = ({ roomId, userId }) => {
         );
         wsRef.current = ws;
 
-        ws.onopen = () => {
-          
-        };
+        ws.onopen = () => {};
 
         ws.onmessage = async (event) => {
           const data = JSON.parse(event.data);
-          
 
           switch (data.type) {
             case "history":
-              
               const enrichedMessages = data.messages.map((msg: any) => {
                 if (msg.f_data) {
                   msg.imageUrl = simulateReceiveImage(msg.f_data);
                 }
                 return msg;
               });
-              setMessages(enrichedMessages.reverse());
+              setMessages(enrichedMessages);
               setTimeout(() => {
                 setLoadingInitial(false);
                 setInitialLoaded(true);
+                isInitialLoadRef.current = false;
               }, 0);
               break;
 
-            case "older_messages":
-              
-              const oldMessages = data.messages.map((msg: any) => {
-                if (msg.f_data) {
-                  msg.imageUrl = simulateReceiveImage(msg.f_data);
-                }
-                return msg;
-              });
-              setMessages(oldMessages);
+            case "older_messages": {
+              const oldMessages = data.messages
+                .map((msg: any) => {
+                  if (msg.f_data) {
+                    msg.imageUrl = simulateReceiveImage(msg.f_data);
+                  }
+                  return msg;
+                })
+                .reverse(); // 🔁 Make sure they're in correct (oldest-to-newest) order
+
+              setMessages((prev) => [...oldMessages, ...prev]);
               setHasMore(oldMessages.length > 0);
               setLoading(false);
-              // setLoadingOlder(false);
-              break;
 
-            case "message_update":
-              
-              setMessages((msgs) => {
-                const idx = msgs.findIndex(
-                  (m: any) => m.id === data.message.id
-                );
+              // ✅ Use rAF to wait for DOM update
+              // requestAnimationFrame(() => {
+              //   const container = containerRef.current;
+              //   const offset = scrollOffsetRef.current;
+
+              //   if (container && offset !== null) {
+              //     container.scrollTop = container.scrollHeight - offset;
+              //   }
+              // });
+
+              requestAnimationFrame(() => {
+                const container = containerRef.current;
+                const offset = scrollOffsetRef.current;
+
+                if (container && offset !== null) {
+                  // Set scrollTop to new scrollHeight minus previous offset
+                  container.scrollTop = container.scrollHeight - offset;
+                }
+              });
+
+              break;
+            }
+
+            case "message_update": {
+              setMessages((prevMessages) => {
+                // Ignore if update is for another room
+                if (data.room_id !== roomId) return prevMessages;
+
                 const updatedMessage = { ...data.message };
                 if (updatedMessage.f_data) {
                   updatedMessage.imageUrl = simulateReceiveImage(
@@ -263,23 +326,61 @@ const Chat: React.FC<ChatProps> = ({ roomId, userId }) => {
                   );
                 }
 
+                // Find oldest visible timestamp from current messages
+                const oldestVisibleTimestamp =
+                  prevMessages.length > 0
+                    ? prevMessages.reduce(
+                        (oldest, m) =>
+                          new Date(m.timestamp) < new Date(oldest)
+                            ? m.timestamp
+                            : oldest,
+                        prevMessages[0].timestamp
+                      )
+                    : null;
+
+                // Ignore updates older than the oldest visible message timestamp
+                if (
+                  oldestVisibleTimestamp &&
+                  updatedMessage.timestamp &&
+                  new Date(updatedMessage.timestamp) <
+                    new Date(oldestVisibleTimestamp)
+                ) {
+                  console.log(
+                    "Ignoring message update outside visible range",
+                    updatedMessage.id
+                  );
+                  return prevMessages;
+                }
+
+                // Find if message already exists
+                const idx = prevMessages.findIndex(
+                  (m) => m.id === updatedMessage.id
+                );
+
                 if (idx >= 0) {
-                  const newMsgs = [...msgs];
+                  // Replace existing message with updated one
+                  const newMsgs = [...prevMessages];
                   newMsgs[idx] = updatedMessage;
                   return newMsgs;
                 } else {
-                  return [...msgs, updatedMessage];
+                  // Add new message
+                  return [...prevMessages, updatedMessage];
                 }
               });
               break;
+            }
 
             case "typing":
               setTypingUsers((prev) => {
-                const newSet = new Set(prev);
-                data.is_typing
-                  ? newSet.add(data.user_id)
-                  : newSet.delete(data.user_id);
-                return newSet;
+                const newMap = new Map(prev);
+
+                if (data.is_typing) {
+                  newMap.set(data.user_id, data); // store full data
+                } else {
+                  newMap.delete(data.user_id);
+                }
+
+                return newMap;
               });
               break;
 
@@ -288,9 +389,7 @@ const Chat: React.FC<ChatProps> = ({ roomId, userId }) => {
           }
         };
 
-        ws.onclose = () => {
-          
-        };
+        ws.onclose = () => {};
       } catch (err) {
         console.error("Setup error:", err);
       }
@@ -327,8 +426,6 @@ const Chat: React.FC<ChatProps> = ({ roomId, userId }) => {
 
       const fileType = f.type;
       const fileName = f.name.toLowerCase();
-
-      
 
       const reader = new FileReader();
 
@@ -388,7 +485,6 @@ const Chat: React.FC<ChatProps> = ({ roomId, userId }) => {
         let wsPayload: { [key: string]: any } = { type: "message" };
 
         if (input) {
-          
           wsPayload["content"] = input;
         }
         if (file) {
@@ -415,7 +511,6 @@ const Chat: React.FC<ChatProps> = ({ roomId, userId }) => {
         }
 
         if (input && !file) {
-          
           wsRef.current.send(JSON.stringify(wsPayload));
         }
         setInput("");
@@ -436,7 +531,7 @@ const Chat: React.FC<ChatProps> = ({ roomId, userId }) => {
     (event: React.ChangeEvent<HTMLInputElement>) => {
       setInput(event.target.value);
       sendTyping(true);
-      
+
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
       }
@@ -455,9 +550,7 @@ const Chat: React.FC<ChatProps> = ({ roomId, userId }) => {
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
-      
       if (e.key === "Enter") {
-        
         if (e.shiftKey) {
           // Allow new line — do NOT prevent default
           return;
@@ -486,8 +579,7 @@ const Chat: React.FC<ChatProps> = ({ roomId, userId }) => {
     //   "_blank",
     //   "noopener,noreferrer"
     // );
-    navigate(`/meet-me/${roomId}/${userId}`)
-    
+    navigate(`/meet-me/${roomId}/${userId}`);
   }, [roomId, userId]);
 
   const removeFile = useCallback(() => {
@@ -505,26 +597,24 @@ const Chat: React.FC<ChatProps> = ({ roomId, userId }) => {
 
   const handleEditClose = useCallback(() => {
     setOpenEdit(false);
-  },[]);
+  }, []);
 
   const handleAddClose = useCallback(() => {
     setOpenAdd(false);
-  },[]);
+  }, []);
 
   const handleParticipantsOpen = useCallback(() => {
     setOpenParticipants(true);
-  },[]);
+  }, []);
 
   const handleParticipantsClose = useCallback(() => {
     setOpenParticipants(false);
-  },[]);
+  }, []);
 
-
-    useEffect(() => {
+  useEffect(() => {
     setParticipants(allRoomUsers);
     setParticipantsCount(allRoomUsers.length);
   }, [allRoomUsers]);
-
 
   return (
     <Box
@@ -533,7 +623,8 @@ const Chat: React.FC<ChatProps> = ({ roomId, userId }) => {
         padding: 1,
         display: "flex",
         flexDirection: "column",
-        height: "-webkit-fill-available",
+        height: "100vh",
+        // height: "-webkit-fill-available",
         // filter: "contrast(80%) brightness(100%)"
       }}
     >
@@ -562,7 +653,7 @@ const Chat: React.FC<ChatProps> = ({ roomId, userId }) => {
                     aria-label="add"
                     onClick={handleEditRoom}
                   >
-                    <EditIcon/>
+                    <EditIcon />
                   </Fab>
                 </Tooltip>
               </Box>
@@ -603,7 +694,7 @@ const Chat: React.FC<ChatProps> = ({ roomId, userId }) => {
                     // }}
                     onClick={handleParticipantsOpen}
                   >
-                    <GroupAddRoundedIcon  />
+                    <GroupAddRoundedIcon />
                   </Fab>
                 </Tooltip>
                 <ParticipantsModal
@@ -638,9 +729,20 @@ const Chat: React.FC<ChatProps> = ({ roomId, userId }) => {
           alignItems="center"
           height="100%"
         >
-          <Typography variant="body1" color="text.secondary">
-            No messages available.
-          </Typography>
+          {userId && roomId ? (
+            <Typography variant="body1" color="text.secondary">
+              No messages available.
+            </Typography>
+          ) : (
+            <Typography
+              variant="body1"
+              color="#ff0000"
+              sx={{ fontWeight: "700" }}
+            >
+              You are not currently in a room. Please select an existing room or
+              create a new one to continue.
+            </Typography>
+          )}
         </Box>
       ) : (
         <Box
@@ -671,7 +773,7 @@ const Chat: React.FC<ChatProps> = ({ roomId, userId }) => {
             },
           }}
         >
-          <div ref={topRef} />
+          <div ref={topRef} style={{ height: 1 }} />
           {messages.map((msg: any) => (
             <Paper
               elevation={1}
@@ -763,10 +865,14 @@ const Chat: React.FC<ChatProps> = ({ roomId, userId }) => {
             marginBottom: 0,
             marginLeft: "6rem",
             zIndex: 1,
+            position: "absolute",
+            right: "25%",
+            bottom: "2%",
           }}
         >
-          {Array.from(typingUsers)
-            .filter((u) => u !== userId)
+          {[...typingUsers.values()]
+            .filter((u: any) => u.user_id !== userId)
+            .map((u: any) => u.username)
             .join(", ")}{" "}
           typing...
         </Typography>
