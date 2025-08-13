@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://weharate.onrender.com/sitemap.xml
+Sitemap: https://weharatefe.onrender.com/sitemap.xml

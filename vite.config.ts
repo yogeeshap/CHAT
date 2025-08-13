@@ -8,7 +8,7 @@ import Sitemap from 'vite-plugin-sitemap'
 export default defineConfig({
   plugins: [
     react(),
-    Sitemap({ hostname: 'https://weharate.onrender.com' }),
+    Sitemap({ hostname: 'https://weharatefe.onrender.com' }),
     VitePWA({
       registerType: "autoUpdate",
       includeAssets: [
