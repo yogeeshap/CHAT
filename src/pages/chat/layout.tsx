@@ -6,7 +6,7 @@ import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import { createTheme } from "@mui/material/styles";
 import SearchIcon from "@mui/icons-material/Search";
-import { ThemeProvider} from '@mui/material';
+import { Link, ThemeProvider } from "@mui/material";
 import {
   AppProvider,
   type Navigation,
@@ -29,7 +29,6 @@ import HourglassEmptyRoundedIcon from "@mui/icons-material/HourglassEmptyRounded
 import authService from "../../services/auth.service";
 import CreateRoomModal from "./CreateRoomModel";
 import { theme } from "../../theme/theme";
-
 
 interface RoomProps {
   roomId: string;
@@ -54,18 +53,18 @@ const chatBoxTheme = createTheme({
     MuiButton: {
       styleOverrides: {
         root: {
-          fontWeight: 'bold',
-          textTransform: 'none',
-          color: '#11c111 !important',
-          backgroundColor: '#eded567d !important',
+          fontWeight: "bold",
+          textTransform: "none",
+          color: "#11c111 !important",
+          backgroundColor: "#eded567d !important",
         },
         text: {
-          fontWeight: 'bold',
-          textTransform: 'none',
+          fontWeight: "bold",
+          textTransform: "none",
         },
         contained: {
-          fontWeight: 'bold',
-          textTransform: 'none',
+          fontWeight: "bold",
+          textTransform: "none",
         },
       },
     },
@@ -74,19 +73,18 @@ const chatBoxTheme = createTheme({
     MuiListItemButton: {
       styleOverrides: {
         root: {
-          '&.Mui-selected': {
-            color: '#11c111 !important',
-            backgroundColor: '#eded567d !important',
+          "&.Mui-selected": {
+            color: "#11c111 !important",
+            backgroundColor: "#eded567d !important",
           },
-          '&.Mui-selected:hover': {
-            backgroundColor: '#eded567d !important',
+          "&.Mui-selected:hover": {
+            backgroundColor: "#eded567d !important",
           },
         },
       },
     },
   },
 });
-
 
 function ChatBoxPage({ pathname }: { pathname: string }) {
   const [, roomId, userId] = pathname.match(/[^\/]+/g) || [];
@@ -95,8 +93,8 @@ function ChatBoxPage({ pathname }: { pathname: string }) {
     (state) => state.chat.activeRoomUser || {}
   );
 
-  const activeRoomId = roomId || activeRoomUser.roomId
-  const activeUserId = userId || activeRoomUser.userId
+  const activeRoomId = roomId || activeRoomUser.roomId;
+  const activeUserId = userId || activeRoomUser.userId;
 
   return (
     <Box
@@ -153,9 +151,25 @@ function SidebarFooter({ mini }: SidebarFooterProps) {
   return (
     <Typography
       variant="caption"
-      sx={{ m: 1, whiteSpace: "nowrap", overflow: "hidden" }}
+      sx={{
+        whiteSpace: "nowrap",
+        overflow: "hidden",
+        bgcolor: "#ffffff",
+        position: "absolute",
+        width:'100%',
+        bottom:'0%',
+        zIndex:1,
+        padding:'3px'
+      }}
     >
-      {mini ? "© W" : `© ${new Date().getFullYear()} Made with love by MUI`}
+      {mini ? "© W" : <> © 2025 Developed By <Link
+            href="https://weharate.netlify.app"
+            target="_blank"
+            rel="noopener noreferrer"
+            underline="hover"
+          >
+            WeHarate
+          </Link> </>}
     </Typography>
   );
 }
@@ -206,7 +220,6 @@ const NavigationData = [
 ];
 
 export default function ChatBoxLayout(props: DemoProps) {
-  
   const { window } = props;
   const router = useDemoRouter("/chat");
   // Remove this const when copying and pasting into your project.
@@ -221,8 +234,6 @@ export default function ChatBoxLayout(props: DemoProps) {
   );
 
   const logedInUser = useAppSelector<UserDetail>((state) => state.auth.user);
-
-  
 
   const authentication = useMemo(() => {
     return {
@@ -239,16 +250,14 @@ export default function ChatBoxLayout(props: DemoProps) {
   }, [logedInUser, navigate]); // include dependencies!
 
   useEffect(() => {
-    
-      const roomUserDetailsData = roomUserDetails?.map((user: any) => {
-        return {
-          segment: `chat/${user["room_id"]}/${user["user_id"]}`,
-          title: user["room_name"],
-          icon: <AccountCircleIcon />,
-        };
-      });
-      setNavigation(roomUserDetailsData);
- 
+    const roomUserDetailsData = roomUserDetails?.map((user: any) => {
+      return {
+        segment: `chat/${user["room_id"]}/${user["user_id"]}`,
+        title: user["room_name"],
+        icon: <AccountCircleIcon />,
+      };
+    });
+    setNavigation(roomUserDetailsData);
 
     if (logedInUser) {
       setSession({ user: logedInUser });
@@ -257,28 +266,27 @@ export default function ChatBoxLayout(props: DemoProps) {
 
   return (
     // Remove this provider when copying and pasting into your project.
-    <Box sx={{position:"relative",width:'100%',height:'100%'}}>
-    <AppProvider
-      navigation={navigation}
-      router={router}
-      theme={chatBoxTheme}
-      window={chatBoxWindow}
-      authentication={authentication}
-      session={session}
-    >
-      <DashboardLayout
-        slots={{
-          appTitle: CustomAppTitle,
-          toolbarActions: ChatSearch,
-          sidebarFooter: SidebarFooter,
-        }}
+    <Box sx={{ position: "relative", width: "100%", height: "100%" }}>
+      <AppProvider
+        navigation={navigation}
+        router={router}
+        theme={chatBoxTheme}
+        window={chatBoxWindow}
+        authentication={authentication}
+        session={session}
       >
-        <ThemeProvider theme={theme}>
-        <ChatBoxPage pathname={router.pathname} />
-        </ThemeProvider>
-      </DashboardLayout>
-    </AppProvider>
- 
-</Box>
+        <DashboardLayout
+          slots={{
+            appTitle: CustomAppTitle,
+            toolbarActions: ChatSearch,
+            sidebarFooter: SidebarFooter,
+          }}
+        >
+          <ThemeProvider theme={theme}>
+            <ChatBoxPage pathname={router.pathname} />
+          </ThemeProvider>
+        </DashboardLayout>
+      </AppProvider>
+    </Box>
   );
 }
