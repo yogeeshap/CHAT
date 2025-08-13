@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://chat-app-frontend-wxa0.onrender.com/sitemap.xml
+Sitemap: https://weharate.onrender.com/sitemap.xml
