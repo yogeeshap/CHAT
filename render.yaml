@@ -4,11 +4,12 @@ services:
     env: docker
     plan: free
     branch: main
+    region: Singapore
     dockerfilePath: Dockerfile
     dockerContext: .
     autoDeploy: true
     envVars:
       - key: VITE_API_URL
-        value: https://chat-app-backend-pg6c.onrender.com
+        value: https://weharatebe.onrender.com
       - key: VITE_WS_URL
-        value: wss://chat-app-backend-pg6c.onrender.com/ws
+        value: wss://weharatebe.onrender.com/ws
