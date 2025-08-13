@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: weharate
+    name: weharatefe
     env: docker
     plan: free
     branch: main
